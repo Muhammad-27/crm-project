@@ -4,7 +4,7 @@ from .models import Base, User
 
 # SQLite bazasiga ulanish
 DATABASE_URL = "postgresql://neondb_owner:npg_10iSmGkcRNhy@ep-broad-morning-aqv7h72d-pooler.c-8.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
-engine = create_engine(DATABASE_URL)
+engine = create_engine(URL_DATABASE, pool_pre_ping=True, pool_recycle=300)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 def init_db():
