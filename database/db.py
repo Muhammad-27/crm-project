@@ -1,11 +1,22 @@
+import os
+from dotenv import load_dotenv
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from .models import Base, User
+from sqlalchemy.orm import declarative_base, sessionmaker
 
-# SQLite bazasiga ulanish
-DATABASE_URL = "postgresql://neondb_owner:npg_10iSmGkcRNhy@ep-broad-morning-aqv7h72d-pooler.c-8.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
+# (Agar oldindan User modelini chaqirgan bo'lsangiz, u shu yerda tursin)
+from database.models import User 
+
+# 1. Kompyuterda ishlaganda .env ni o'qiydi, Render'da esa o'z xotirasidan oladi
+load_dotenv()
+
+URL_DATABASE = os.getenv("URL_DATABASE")
+
+# 2. Baza bilan ulanish (PostgreSQL)
 engine = create_engine(URL_DATABASE, pool_pre_ping=True, pool_recycle=300)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()
+
+# --- Pastdagi funksiyalaringiz o'zgarishsiz qoladi ---
 
 def init_db():
     # Jadvallarni yaratish
