@@ -12,6 +12,11 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
+# Server ishlab turganini tekshirish uchun asosiy yo'l
+@app.get("/")
+def health_check():
+    return {"status": "ok", "message": "CRM API 100% ishlab turibdi 🚀"}
+
 # ... qolgan kodlar o'zgarishsiz qoladi ...
 
 # React ruxsatsiz bloklanib qolmasligi uchun CORS sozlamasi
