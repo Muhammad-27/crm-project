@@ -1,26 +1,35 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-# O'zingizning fayllaringizdan chaqirib olamiz
+# O'zingizning fayllaringizdan chaqirib olamiz (AYNAN SHU YER TUSHIB QOLGAN EDI)
 from database.db import SessionLocal, engine
 from database.models import Student, Base
 
-# Jadvallarni bazada yaratish (Agar yo'q bo'lsa, o'zi ochadi)
+# Jadvallarni bazada yaratish
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
-# --- ENG ISHONCHLI CORS SOZLAMASI (100% ISHLAYDI) ---
+# 1. Odatiy CORS (Xavfsizlik uchun)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],          # Hamma saytlarga ruxsat!
-    allow_credentials=False,      # Yulduzcha (*) bo'lganda bu doim False bo'lishi shart!
+    allow_origins=["https://crm-rysx.vercel.app"],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-# ----------------------------------------------------
+
+# 2. MAJBURIY CORS (Yakuniy zarba: Render'ni ruxsat berishga majburlaymiz)
+@app.middleware("http")
+async def force_cors(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["Access-Control-Allow-Origin"] = "https://crm-rysx.vercel.app"
+    response.headers["Access-Control-Allow-Credentials"] = "true"
+    response.headers["Access-Control-Allow-Methods"] = "*"
+    response.headers["Access-Control-Allow-Headers"] = "*"
+    return response
 
 # Baza bilan bog'lanish funksiyasi
 def get_db():
@@ -37,7 +46,6 @@ class StudentCreate(BaseModel):
     phone: str
     fee: int
 
-# Tahrirlash uchun ma'lumot qolipi
 class StudentUpdate(BaseModel):
     name: str
     phone: str
@@ -62,7 +70,6 @@ def add_student(student: StudentCreate, db: Session = Depends(get_db)):
 @app.get("/get-students/{teacher_id}")
 def get_students(teacher_id: str, db: Session = Depends(get_db)):
     students = db.query(Student).filter(Student.teacher_telegram_id == teacher_id).all()
-    # Ma'lumotlarni React tushunadigan shaklda qaytaramiz
     result = []
     for s in students:
         result.append({
@@ -71,23 +78,18 @@ def get_students(teacher_id: str, db: Session = Depends(get_db)):
             "phone": s.phone,
             "isPaid": s.is_paid,
             "fee": s.fee,
-            "avatar": f"https://xsgames.co/randomusers/avatar.php?g=pixel&key={s.id}" # Vaqtinchalik avatar
+            "avatar": f"https://xsgames.co/randomusers/avatar.php?g=pixel&key={s.id}"
         })
     return result
 
 # 3. O'quvchi to'lovini qabul qilish API'si (PUT)
 @app.put("/pay/{student_id}")
 def receive_payment(student_id: int, db: Session = Depends(get_db)):
-    # Bazadan ID bo'yicha o'quvchini qidirib topamiz
     student = db.query(Student).filter(Student.id == student_id).first()
-    
     if not student:
         return {"status": "error", "message": "O'quvchi topilmadi!"}
-    
-    # O'quvchining qarzini "To'ladi" (True) ga o'zgartiramiz
     student.is_paid = True
-    db.commit() # O'zgarishni bazaga saqlaymiz
-    
+    db.commit() 
     return {"status": "success", "message": "To'lov qabul qilindi!"}
 
 # 4. Tahrirlash (Edit) API'si
@@ -96,7 +98,6 @@ def edit_student(student_id: int, data: StudentUpdate, db: Session = Depends(get
     student = db.query(Student).filter(Student.id == student_id).first()
     if not student:
         return {"status": "error", "message": "O'quvchi topilmadi!"}
-    
     student.full_name = data.name
     student.phone = data.phone
     student.fee = data.fee
