@@ -18,8 +18,8 @@ app = FastAPI()
 # React ruxsatsiz bloklanib qolmasligi uchun CORS sozlamasi
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://crm-rysx.vercel.app"], # DING! Aynan shu manzil
-    allow_credentials=False,
+    allow_origins=["*"],          # Hamma saytlarga ruxsat!
+    allow_credentials=False,      # Ssilka yulduzcha (*) bo'lganda bu doim False bo'lishi shart!
     allow_methods=["*"],
     allow_headers=["*"],
 )
