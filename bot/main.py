@@ -1,18 +1,22 @@
 import asyncio
 import os
 import sys
+from dotenv import load_dotenv # <--- load_dotenv ni shu yerga chaqiramiz
+
+# 1. ENG BIRINCHI .env FAYLNI O'QIYMIZ! (Asosiy papkadagini topish uchun aniq yo'l beramiz)
+load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
+
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import CommandStart, Command
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.types.web_app_info import WebAppInfo
-from dotenv import load_dotenv
 
-# Bazani ulash
+# Bazani ulash (Endi bemalol chaqiraveramiz, chunki .env o'qildi)
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from database.db import init_db, get_or_create_user, update_user_role
 
-load_dotenv()
 TOKEN = os.getenv("BOT_TOKEN")
+# ... qolgan kodlar o'zgarishsiz qoladi ...
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
