@@ -12,17 +12,15 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
-
-# ... qolgan kodlar o'zgarishsiz qoladi ...
-
-# React ruxsatsiz bloklanib qolmasligi uchun CORS sozlamasi
+# --- ENG ISHONCHLI CORS SOZLAMASI (100% ISHLAYDI) ---
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],          # Hamma saytlarga ruxsat!
-    allow_credentials=False,      # Ssilka yulduzcha (*) bo'lganda bu doim False bo'lishi shart!
+    allow_credentials=False,      # Yulduzcha (*) bo'lganda bu doim False bo'lishi shart!
     allow_methods=["*"],
     allow_headers=["*"],
 )
+# ----------------------------------------------------
 
 # Baza bilan bog'lanish funksiyasi
 def get_db():
@@ -35,6 +33,12 @@ def get_db():
 # React'dan keladigan o'quvchi ma'lumotlari qolipi (Pydantic model)
 class StudentCreate(BaseModel):
     teacher_id: str
+    name: str
+    phone: str
+    fee: int
+
+# Tahrirlash uchun ma'lumot qolipi
+class StudentUpdate(BaseModel):
     name: str
     phone: str
     fee: int
@@ -70,6 +74,7 @@ def get_students(teacher_id: str, db: Session = Depends(get_db)):
             "avatar": f"https://xsgames.co/randomusers/avatar.php?g=pixel&key={s.id}" # Vaqtinchalik avatar
         })
     return result
+
 # 3. O'quvchi to'lovini qabul qilish API'si (PUT)
 @app.put("/pay/{student_id}")
 def receive_payment(student_id: int, db: Session = Depends(get_db)):
@@ -84,11 +89,6 @@ def receive_payment(student_id: int, db: Session = Depends(get_db)):
     db.commit() # O'zgarishni bazaga saqlaymiz
     
     return {"status": "success", "message": "To'lov qabul qilindi!"}
-# Tahrirlash uchun ma'lumot qolipi
-class StudentUpdate(BaseModel):
-    name: str
-    phone: str
-    fee: int
 
 # 4. Tahrirlash (Edit) API'si
 @app.put("/edit-student/{student_id}")
