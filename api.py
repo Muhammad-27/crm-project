@@ -18,7 +18,7 @@ app = FastAPI()
 # React ruxsatsiz bloklanib qolmasligi uchun CORS sozlamasi
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://luxury-belekoy-350435.netlify.app"], # DING! Faqat o'zingizning saytingizga ruxsat
+    allow_origins=["https://crm-rysx.vercel.app"], # DING! Yangi Vercel manzil. Oxirida "/" bo'lmasin!
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

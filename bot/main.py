@@ -19,7 +19,7 @@ dp = Dispatcher()
 
 # --- TWA (Web App) URL manzili ---
 # Hozircha vaqtinchalik havola turadi, React'ni ishga tushirgach buni o'zgartiramiz
-WEB_APP_URL = "https://luxury-belekoy-350435.netlify.app/" 
+WEB_APP_URL = "https://crm-rysx.vercel.app" 
 
 @dp.message(CommandStart())
 async def command_start_handler(message: types.Message):
