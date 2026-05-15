@@ -12,6 +12,15 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
+app = FastAPI()
+
+# UptimeRobot va brauzerlar xursand bo'lishi uchun asosiy eshik:
+@app.get("/")
+def home():
+    return {"status": "ok", "message": "Server 24/7 ishlab turibdi! 🚀"}
+
+# 1. Odatiy CORS (Xavfsizlik uchun) ... qolgan kodlar davom etib ketaveradi
+
 # 1. Odatiy CORS (Xavfsizlik uchun)
 app.add_middleware(
     CORSMiddleware,
