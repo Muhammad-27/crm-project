@@ -1,58 +1,33 @@
-from sqlalchemy import Column, Integer, String, Boolean, Date, ForeignKey
-from sqlalchemy.orm import declarative_base, relationship
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey
+from sqlalchemy.orm import relationship
+from database.db import Base
 
-Base = declarative_base()
-
-# 1. Foydalanuvchilar jadvali
-class User(Base):
-    __tablename__ = 'users'
-    id = Column(Integer, primary_key=True)
-    telegram_id = Column(String, unique=True, nullable=False)
-    full_name = Column(String, nullable=False)
-    role = Column(String, default="student") # rollar: teacher, assistant, student
+# 1. GURUHLAR JADVALI
+class Group(Base):
+    __tablename__ = "groups"
     
-    # Bog'lanishlar
-    attendances = relationship("Attendance", back_populates="student")
-    tasks = relationship("Task", back_populates="student")
-    payments = relationship("Payment", back_populates="student")
-
-# 2. Davomat jadvali
-class Attendance(Base):
-    __tablename__ = 'attendance'
-    id = Column(Integer, primary_key=True)
-    student_id = Column(Integer, ForeignKey('users.id'))
-    date = Column(Date, nullable=False)
-    is_present = Column(Boolean, default=False)
+    id = Column(Integer, primary_key=True, index=True)
+    teacher_id = Column(String, index=True)  # Qaysi o'qituvchiga tegishli
+    name = Column(String, nullable=False)    # Guruh nomi (masalan: IELTS 14:00)
+    price = Column(Integer, default=0)       # Oylik to'lov
     
-    student = relationship("User", back_populates="attendances")
+    # Bitta guruhda ko'plab o'quvchilar bo'ladi. (Agar guruh o'chsa, ichidagi o'quvchilar ham o'chadi)
+    students = relationship("Student", back_populates="group", cascade="all, delete-orphan")
 
-# 3. Topshiriqlar (Speaking, Essential)
-class Task(Base):
-    __tablename__ = 'tasks'
-    id = Column(Integer, primary_key=True)
-    student_id = Column(Integer, ForeignKey('users.id'))
-    task_type = Column(String) # 'speaking' yoki 'essential'
-    score = Column(String) # Bahosi yoki darajasi
-    date = Column(Date, nullable=False)
-    
-    student = relationship("User", back_populates="tasks")
-
-# 4. To'lovlar jadvali
-class Payment(Base):
-    __tablename__ = 'payments'
-    id = Column(Integer, primary_key=True)
-    student_id = Column(Integer, ForeignKey('users.id'))
-    amount = Column(Integer)
-    month = Column(String) # Masalan: '2023-10'
-    is_paid = Column(Boolean, default=False)
-    
-    student = relationship("User", back_populates="payments")
-    # 5. O'qituvchi paneli orqali qo'shilgan o'quvchilar jadvali
+# 2. O'QUVCHILAR JADVALI
 class Student(Base):
-    __tablename__ = 'students'
-    id = Column(Integer, primary_key=True)
-    teacher_telegram_id = Column(String, index=True) # O'quvchini qo'shgan o'qituvchining Telegram ID si
-    full_name = Column(String, nullable=False)
+    __tablename__ = "students"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    teacher_id = Column(String, index=True)
+    
+    # MUHIM: Bu o'quvchi qaysi guruhga tegishli ekanligini bildiruvchi "Kishan"
+    group_id = Column(Integer, ForeignKey("groups.id")) 
+    
+    name = Column(String, nullable=False)
     phone = Column(String)
-    fee = Column(Integer)
-    is_paid = Column(Boolean, default=False)
+    fee = Column(Integer, default=0)
+    isPaid = Column(Boolean, default=False)
+    
+    # O'quvchi bitta guruhga tegishli bo'ladi
+    group = relationship("Group", back_populates="students")    

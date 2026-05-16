@@ -1,25 +1,21 @@
-from fastapi import FastAPI, Depends, Request
+from fastapi import FastAPI, Depends, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
 from sqlalchemy.orm import Session
+from pydantic import BaseModel
+import database.models as models
+from database.db import get_db, engine
 
-# O'zingizning fayllaringizdan chaqirib olamiz (AYNAN SHU YER TUSHIB QOLGAN EDI)
-from database.db import SessionLocal, engine
-from database.models import Student, Base
-
-# Jadvallarni bazada yaratish
-Base.metadata.create_all(bind=engine)
-# ... (eng tepadagi importlar o'z o'rnida qoladi) ...
+# Bazani tekshirish
+models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
-# Ruxsat etilgan manzillar ro'yxati (Ham Vercel, ham o'zingizning kompyuteringiz)
+# --- CORS XAVFSIZLIK ---
 origins = [
     "https://crm-rysx.vercel.app",
     "http://localhost:5173"
 ]
 
-# 1. Odatiy CORS (Xavfsizlik uchun)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -28,103 +24,108 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 2. MAJBURIY CORS (Endi kelgan mehmonga qarab ruxsat beradi)
 @app.middleware("http")
 async def force_cors(request: Request, call_next):
     response = await call_next(request)
     origin = request.headers.get("origin")
-    
-    # Agar so'rov biz tanigan joylardan kelsa, o'shanga ruxsat beramiz
     if origin in origins:
         response.headers["Access-Control-Allow-Origin"] = origin
-    else:
+    elif origins:
         response.headers["Access-Control-Allow-Origin"] = origins[0]
-        
     response.headers["Access-Control-Allow-Credentials"] = "true"
     response.headers["Access-Control-Allow-Methods"] = "*"
     response.headers["Access-Control-Allow-Headers"] = "*"
     return response
 
-# ... (Pastdagi barcha API funksiyalar: get_db, add_student va boshqalar o'z holicha qoladi) ...
+@app.get("/")
+def home():
+    return {"status": "ok", "message": "Server 24/7 ishlab turibdi! 🚀"}
 
-# Baza bilan bog'lanish funksiyasi
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-# React'dan keladigan o'quvchi ma'lumotlari qolipi (Pydantic model)
-class StudentCreate(BaseModel):
+# --- MA'LUMOTLAR QOLIP (SCHEMAS) ---
+class GroupCreate(BaseModel):
     teacher_id: str
     name: str
-    phone: str
-    fee: int
+    price: int
 
-class StudentUpdate(BaseModel):
+class StudentCreate(BaseModel):
+    teacher_id: str
+    group_id: int  # Endi o'quvchi qaysi guruhga kirishini aytishimiz shart
     name: str
     phone: str
     fee: int
 
-# 1. Yangi o'quvchi qo'shish API'si (POST)
-@app.post("/add-student")
-def add_student(student: StudentCreate, db: Session = Depends(get_db)):
-    new_student = Student(
-        teacher_telegram_id=student.teacher_id,
-        full_name=student.name,
-        phone=student.phone,
-        fee=student.fee,
-        is_paid=False
-    )
-    db.add(new_student)
-    db.commit()
-    db.refresh(new_student)
-    return {"status": "success", "message": "O'quvchi saqlandi!", "student": new_student}
+# ==========================================
+# 1. GURUHLAR UCHUN API'LAR
+# ==========================================
 
-# 2. O'qituvchining o'quvchilarini tortib olish API'si (GET)
-@app.get("/get-students/{teacher_id}")
-def get_students(teacher_id: str, db: Session = Depends(get_db)):
-    students = db.query(Student).filter(Student.teacher_telegram_id == teacher_id).all()
+@app.post("/add-group")
+def add_group(group: GroupCreate, db: Session = Depends(get_db)):
+    new_group = models.Group(
+        teacher_id=group.teacher_id,
+        name=group.name,
+        price=group.price
+    )
+    db.add(new_group)
+    db.commit()
+    return {"message": "Guruh muvaffaqiyatli qo'shildi!"}
+
+@app.get("/get-groups/{teacher_id}")
+def get_groups(teacher_id: str, db: Session = Depends(get_db)):
+    # O'qituvchining barcha guruhlarini topamiz
+    groups = db.query(models.Group).filter(models.Group.teacher_id == teacher_id).all()
+    
     result = []
-    for s in students:
+    for g in groups:
+        # Frontend UI uchun srazu hisob-kitob qilib beramiz:
+        student_count = len(g.students)
+        expected_revenue = sum([s.fee for s in g.students])
+        
         result.append({
-            "id": s.id,
-            "name": s.full_name,
-            "phone": s.phone,
-            "isPaid": s.is_paid,
-            "fee": s.fee,
-            "avatar": f"https://xsgames.co/randomusers/avatar.php?g=pixel&key={s.id}"
+            "id": g.id,
+            "name": g.name,
+            "price": g.price,
+            "studentCount": student_count,
+            "expectedRevenue": expected_revenue
         })
     return result
 
-# 3. O'quvchi to'lovini qabul qilish API'si (PUT)
-@app.put("/pay/{student_id}")
-def receive_payment(student_id: int, db: Session = Depends(get_db)):
-    student = db.query(Student).filter(Student.id == student_id).first()
-    if not student:
-        return {"status": "error", "message": "O'quvchi topilmadi!"}
-    student.is_paid = True
-    db.commit() 
-    return {"status": "success", "message": "To'lov qabul qilindi!"}
+# ==========================================
+# 2. O'QUVCHILAR UCHUN API'LAR
+# ==========================================
 
-# 4. Tahrirlash (Edit) API'si
-@app.put("/edit-student/{student_id}")
-def edit_student(student_id: int, data: StudentUpdate, db: Session = Depends(get_db)):
-    student = db.query(Student).filter(Student.id == student_id).first()
-    if not student:
-        return {"status": "error", "message": "O'quvchi topilmadi!"}
-    student.full_name = data.name
-    student.phone = data.phone
-    student.fee = data.fee
+@app.post("/add-student")
+def add_student(student: StudentCreate, db: Session = Depends(get_db)):
+    new_student = models.Student(
+        teacher_id=student.teacher_id,
+        group_id=student.group_id,
+        name=student.name,
+        phone=student.phone,
+        fee=student.fee
+    )
+    db.add(new_student)
     db.commit()
-    return {"status": "success", "message": "Ma'lumot yangilandi!"}
+    return {"message": "O'quvchi qo'shildi!"}
 
-# 5. O'chirish (Delete) API'si
+@app.get("/get-students/{group_id}")
+def get_students(group_id: int, db: Session = Depends(get_db)):
+    # Endi o'quvchilarni o'qituvchi ID si bilan emas, Guruh ID si bilan tortamiz
+    students = db.query(models.Student).filter(models.Student.group_id == group_id).all()
+    return students
+
+@app.put("/pay/{student_id}")
+def pay_student(student_id: int, db: Session = Depends(get_db)):
+    student = db.query(models.Student).filter(models.Student.id == student_id).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Topilmadi")
+    student.isPaid = True
+    db.commit()
+    return {"message": "To'lov qabul qilindi"}
+
 @app.delete("/delete-student/{student_id}")
 def delete_student(student_id: int, db: Session = Depends(get_db)):
-    student = db.query(Student).filter(Student.id == student_id).first()
-    if student:
-        db.delete(student)
-        db.commit()
-    return {"status": "success", "message": "O'quvchi o'chirildi!"}
+    student = db.query(models.Student).filter(models.Student.id == student_id).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="Topilmadi")
+    db.delete(student)
+    db.commit()
+    return {"message": "O'chirildi"}
