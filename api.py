@@ -9,36 +9,43 @@ from database.models import Student, Base
 
 # Jadvallarni bazada yaratish
 Base.metadata.create_all(bind=engine)
+# ... (eng tepadagi importlar o'z o'rnida qoladi) ...
 
 app = FastAPI()
 
-app = FastAPI()
-
-# UptimeRobot va brauzerlar xursand bo'lishi uchun asosiy eshik:
-@app.get("/")
-def home():
-    return {"status": "ok", "message": "Server 24/7 ishlab turibdi! 🚀"}
-
-# 1. Odatiy CORS (Xavfsizlik uchun) ... qolgan kodlar davom etib ketaveradi
+# Ruxsat etilgan manzillar ro'yxati (Ham Vercel, ham o'zingizning kompyuteringiz)
+origins = [
+    "https://crm-rysx.vercel.app",
+    "http://localhost:5173"
+]
 
 # 1. Odatiy CORS (Xavfsizlik uchun)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://crm-rysx.vercel.app"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# 2. MAJBURIY CORS (Yakuniy zarba: Render'ni ruxsat berishga majburlaymiz)
+# 2. MAJBURIY CORS (Endi kelgan mehmonga qarab ruxsat beradi)
 @app.middleware("http")
 async def force_cors(request: Request, call_next):
     response = await call_next(request)
-    response.headers["Access-Control-Allow-Origin"] = "https://crm-rysx.vercel.app"
+    origin = request.headers.get("origin")
+    
+    # Agar so'rov biz tanigan joylardan kelsa, o'shanga ruxsat beramiz
+    if origin in origins:
+        response.headers["Access-Control-Allow-Origin"] = origin
+    else:
+        response.headers["Access-Control-Allow-Origin"] = origins[0]
+        
     response.headers["Access-Control-Allow-Credentials"] = "true"
     response.headers["Access-Control-Allow-Methods"] = "*"
     response.headers["Access-Control-Allow-Headers"] = "*"
     return response
+
+# ... (Pastdagi barcha API funksiyalar: get_db, add_student va boshqalar o'z holicha qoladi) ...
 
 # Baza bilan bog'lanish funksiyasi
 def get_db():
