@@ -180,3 +180,15 @@ def save_attendance(data: AttendanceCreate, db: Session = Depends(get_db)):
         
     db.commit()
     return {"message": "Davomat muvaffaqiyatli saqlandi!"}
+@app.get("/get-attendance/{group_id}")
+def get_attendance(group_id: int, date: str, db: Session = Depends(get_db)):
+    # Shu guruhning, aniq shu sanadagi faqat "Kelgan" (True) o'quvchilarini topamiz
+    records = db.query(models.Attendance).filter(
+        models.Attendance.group_id == group_id,
+        models.Attendance.date == date,
+        models.Attendance.is_present == True
+    ).all()
+    
+    # Faqat o'quvchilarning ID larini ro'yxat qilib jo'natamiz (Masalan: [1, 4, 5])
+    present_ids = [record.student_id for record in records]
+    return present_ids
