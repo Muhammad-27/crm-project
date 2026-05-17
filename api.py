@@ -192,3 +192,18 @@ def get_attendance(group_id: int, date: str, db: Session = Depends(get_db)):
     # Faqat o'quvchilarning ID larini ro'yxat qilib jo'natamiz (Masalan: [1, 4, 5])
     present_ids = [record.student_id for record in records]
     return present_ids
+@app.get("/student-history/{student_id}")
+def get_student_history(student_id: int, db: Session = Depends(get_db)):
+    # O'quvchining barcha davomatlarini sanasi bo'yicha (eng yangilari tepada) tortib olamiz
+    history = db.query(models.Attendance).filter(
+        models.Attendance.student_id == student_id
+    ).order_by(models.Attendance.date.desc()).all()
+    
+    result = []
+    for h in history:
+        result.append({
+            "date": h.date,
+            "isPresent": h.is_present
+        })
+        
+    return result
