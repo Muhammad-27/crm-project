@@ -5,6 +5,14 @@ from pydantic import BaseModel
 import database.models as models
 from database.db import get_db, engine
 
+from typing import List # Tepadagi importlarga shuni qo'shing (agar yo'q bo'lsa)
+
+# --- MA'LUMOTLAR QOLIP (SCHEMAS) --- qismiga shuni qo'shing:
+class AttendanceCreate(BaseModel):
+    group_id: int
+    date: str
+    present_ids: List[int]  # Frontend'dan keladigan kelgan o'quvchilar ID lari ro'yxati
+
 # Bazani tekshirish
 models.Base.metadata.create_all(bind=engine)
 
@@ -129,3 +137,34 @@ def delete_student(student_id: int, db: Session = Depends(get_db)):
     db.delete(student)
     db.commit()
     return {"message": "O'chirildi"}
+
+# ==========================================
+# 3. DAVOMAT UCHUN API'LAR
+# ==========================================
+
+@app.post("/save-attendance")
+def save_attendance(data: AttendanceCreate, db: Session = Depends(get_db)):
+    # 1. Shu guruhdagi barcha o'quvchilarni bazadan olamiz
+    students = db.query(models.Student).filter(models.Student.group_id == data.group_id).all()
+    
+    # 2. Xavfsizlik: Agar o'qituvchi bitta sanada 2 marta davomat jo'natsa, eskisini o'chirib yangilaymiz
+    db.query(models.Attendance).filter(
+        models.Attendance.group_id == data.group_id,
+        models.Attendance.date == data.date
+    ).delete()
+    
+    # 3. Har bir o'quvchi uchun davomatni yozib chiqamiz
+    for student in students:
+        # Agar o'quvchining ID si 'present_ids' ro'yxatida bo'lsa, demak u kelgan (True)
+        is_present = student.id in data.present_ids
+        
+        new_record = models.Attendance(
+            student_id=student.id,
+            group_id=data.group_id,
+            date=data.date,
+            is_present=is_present
+        )
+        db.add(new_record)
+        
+    db.commit()
+    return {"message": "Davomat muvaffaqiyatli saqlandi!"}
