@@ -207,3 +207,14 @@ def get_student_history(student_id: int, db: Session = Depends(get_db)):
         })
         
     return result
+@app.get("/group-attendance-dates/{group_id}")
+def get_group_attendance_dates(group_id: int, db: Session = Depends(get_db)):
+    # Shu guruhda qaysi sanalarda davomat olinganini topamiz 
+    # (bitta sanada 20 ta o'quvchi bo'lsa ham, .distinct() uni 1 ta sana qilib qaytaradi)
+    records = db.query(models.Attendance.date).filter(
+        models.Attendance.group_id == group_id
+    ).distinct().order_by(models.Attendance.date.desc()).all()
+    
+    # Natijani oddiy ro'yxatga aylantirib jo'natamiz
+    dates = [r[0] for r in records]
+    return dates
