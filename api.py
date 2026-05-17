@@ -97,6 +97,18 @@ def get_groups(teacher_id: str, db: Session = Depends(get_db)):
         })
     return result
 
+@app.delete("/delete-group/{group_id}")
+def delete_group(group_id: int, db: Session = Depends(get_db)):
+    group = db.query(models.Group).filter(models.Group.id == group_id).first()
+    if not group:
+        raise HTTPException(status_code=404, detail="Guruh topilmadi")
+    
+    # Guruh o'chirilganda, bazadagi ulanish (cascade) orqali 
+    # ichidagi o'quvchilar va ularning davomatlari ham avtomat o'chib ketadi.
+    db.delete(group)
+    db.commit()
+    return {"message": "Guruh muvaffaqiyatli o'chirildi!"}
+
 # ==========================================
 # 2. O'QUVCHILAR UCHUN API'LAR
 # ==========================================
