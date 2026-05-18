@@ -103,7 +103,7 @@ def get_teachers(db: Session = Depends(get_db)):
 @app.post("/add-group")
 def add_group(group: GroupCreate, db: Session = Depends(get_db)):
     new_group = models.Group(
-        teacher_id=group.teacher_id,
+        teacher_id=group.teacher_id, # Endi bu o'qituvchining ID raqami
         name=group.name,
         price=group.price
     )
@@ -112,13 +112,12 @@ def add_group(group: GroupCreate, db: Session = Depends(get_db)):
     return {"message": "Guruh muvaffaqiyatli qo'shildi!"}
 
 @app.get("/get-groups/{teacher_id}")
-def get_groups(teacher_id: str, db: Session = Depends(get_db)):
-    # O'qituvchining barcha guruhlarini topamiz
+def get_groups(teacher_id: int, db: Session = Depends(get_db)): # DIQQAT: int qildik
+    # Aniq bitta o'qituvchining guruhlarini topamiz
     groups = db.query(models.Group).filter(models.Group.teacher_id == teacher_id).all()
     
     result = []
     for g in groups:
-        # Frontend UI uchun srazu hisob-kitob qilib beramiz:
         student_count = len(g.students)
         expected_revenue = sum([s.fee for s in g.students])
         
@@ -137,8 +136,6 @@ def delete_group(group_id: int, db: Session = Depends(get_db)):
     if not group:
         raise HTTPException(status_code=404, detail="Guruh topilmadi")
     
-    # Guruh o'chirilganda, bazadagi ulanish (cascade) orqali 
-    # ichidagi o'quvchilar va ularning davomatlari ham avtomat o'chib ketadi.
     db.delete(group)
     db.commit()
     return {"message": "Guruh muvaffaqiyatli o'chirildi!"}
