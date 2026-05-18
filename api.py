@@ -141,46 +141,44 @@ def delete_group(group_id: int, db: Session = Depends(get_db)):
     return {"message": "Guruh muvaffaqiyatli o'chirildi!"}
 
 # ==========================================
-# 2. O'QUVCHILAR UCHUN API'LAR
+# 3. O'QUVCHILAR UCHUN API'LAR (api.py fayli ichida)
 # ==========================================
 
 @app.post("/add-student")
 def add_student(student: StudentCreate, db: Session = Depends(get_db)):
     new_student = models.Student(
-        teacher_id=student.teacher_id,
-        group_id=student.group_id,
+        group_id=student.group_id, 
         name=student.name,
         phone=student.phone,
         fee=student.fee
     )
     db.add(new_student)
     db.commit()
-    return {"message": "O'quvchi qo'shildi!"}
+    return {"message": "O'quvchi muvaffaqiyatli qo'shildi!"}
 
 @app.get("/get-students/{group_id}")
 def get_students(group_id: int, db: Session = Depends(get_db)):
-    # Endi o'quvchilarni o'qituvchi ID si bilan emas, Guruh ID si bilan tortamiz
     students = db.query(models.Student).filter(models.Student.group_id == group_id).all()
-    return students
-
-@app.put("/pay/{student_id}")
-def pay_student(student_id: int, db: Session = Depends(get_db)):
-    student = db.query(models.Student).filter(models.Student.id == student_id).first()
-    if not student:
-        raise HTTPException(status_code=404, detail="Topilmadi")
-    student.isPaid = True
-    db.commit()
-    return {"message": "To'lov qabul qilindi"}
+    
+    result = []
+    for s in students:
+        result.append({
+            "id": s.id,
+            "name": s.name,
+            "phone": s.phone,
+            "fee": s.fee,
+            "isPaid": s.isPaid
+        })
+    return result
 
 @app.delete("/delete-student/{student_id}")
 def delete_student(student_id: int, db: Session = Depends(get_db)):
     student = db.query(models.Student).filter(models.Student.id == student_id).first()
-    if not student:
-        raise HTTPException(status_code=404, detail="Topilmadi")
-    db.delete(student)
-    db.commit()
-    return {"message": "O'chirildi"}
-
+    if student:
+        db.delete(student)
+        db.commit()
+        return {"message": "O'quvchi o'chirildi"}
+    raise HTTPException(status_code=404, detail="O'quvchi topilmadi")
 # ==========================================
 # 3. DAVOMAT UCHUN API'LAR
 # ==========================================
