@@ -50,17 +50,51 @@ def home():
     return {"status": "ok", "message": "Server 24/7 ishlab turibdi! 🚀"}
 
 # --- MA'LUMOTLAR QOLIP (SCHEMAS) ---
+class TeacherCreate(BaseModel):
+    name: str
+    phone: str
+    telegram_id: str = None
+
 class GroupCreate(BaseModel):
-    teacher_id: str
+    teacher_id: int  # Endi bu String emas, Integer (ID raqam) bo'ladi
     name: str
     price: int
 
 class StudentCreate(BaseModel):
-    teacher_id: str
-    group_id: int  # Endi o'quvchi qaysi guruhga kirishini aytishimiz shart
+    group_id: int 
     name: str
     phone: str
     fee: int
+
+# ==========================================
+# 0. O'QITUVCHILAR UCHUN API'LAR (ADMIN UCHUN)
+# ==========================================
+
+@app.post("/add-teacher")
+def add_teacher(teacher: TeacherCreate, db: Session = Depends(get_db)):
+    new_teacher = models.Teacher(
+        name=teacher.name,
+        phone=teacher.phone,
+        telegram_id=teacher.telegram_id
+    )
+    db.add(new_teacher)
+    db.commit()
+    return {"message": "O'qituvchi muvaffaqiyatli qo'shildi!"}
+
+@app.get("/get-teachers")
+def get_teachers(db: Session = Depends(get_db)):
+    teachers = db.query(models.Teacher).all()
+    
+    result = []
+    for t in teachers:
+        # Har bir o'qituvchining nechta guruhi borligini hisoblab beramiz
+        result.append({
+            "id": t.id,
+            "name": t.name,
+            "phone": t.phone,
+            "groupCount": len(t.groups)
+        })
+    return result
 
 # ==========================================
 # 1. GURUHLAR UCHUN API'LAR
