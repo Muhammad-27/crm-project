@@ -61,11 +61,10 @@ class GroupCreate(BaseModel):
     price: int
 
 class StudentCreate(BaseModel):
-    group_id: int 
+    group_id: int
     name: str
     phone: str
     fee: int
-
 # ==========================================
 # 0. O'QITUVCHILAR UCHUN API'LAR (ADMIN UCHUN)
 # ==========================================
