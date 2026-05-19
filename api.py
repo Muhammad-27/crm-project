@@ -106,6 +106,33 @@ def get_teachers(db: Session = Depends(get_db)):
         })
     return result
 
+
+
+
+
+@app.get("/get-stats")
+def get_stats(db: Session = Depends(get_db)):
+    total_teachers = db.query(models.Teacher).count()
+    total_students = db.query(models.Student).count()
+    
+    students = db.query(models.Student).all()
+    # Umumiy kutilayotgan tushum (Hamma o'quvchilarning oylik to'lovi yig'indisi)
+    expected_revenue = sum([s.fee for s in students])
+    # Haqiqiy yig'ilgan tushum (Faqat isPaid = True bo'lganlar)
+    collected_revenue = sum([s.fee for s in students if s.isPaid])
+    
+    return {
+        "total_teachers": total_teachers,
+        "total_students": total_students,
+        "expected_revenue": expected_revenue,
+        "collected_revenue": collected_revenue
+    }
+
+
+
+
+
+
 @app.put("/edit-teacher/{teacher_id}")
 def edit_teacher(teacher_id: int, teacher_data: TeacherUpdate, db: Session = Depends(get_db)):
     teacher = db.query(models.Teacher).filter(models.Teacher.id == teacher_id).first()
