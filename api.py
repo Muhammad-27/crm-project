@@ -65,6 +65,11 @@ class StudentCreate(BaseModel):
     name: str
     phone: str
     fee: int
+    
+class StudentUpdate(BaseModel):
+    name: str
+    phone: str
+    fee: int
 # ==========================================
 # 0. O'QITUVCHILAR UCHUN API'LAR (ADMIN UCHUN)
 # ==========================================
@@ -246,3 +251,27 @@ def get_group_attendance_dates(group_id: int, db: Session = Depends(get_db)):
     # Natijani oddiy ro'yxatga aylantirib jo'natamiz
     dates = [r[0] for r in records]
     return dates
+
+@app.put("/edit-student/{student_id}")
+def edit_student(student_id: int, student_data: StudentUpdate, db: Session = Depends(get_db)):
+    student = db.query(models.Student).filter(models.Student.id == student_id).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="O'quvchi topilmadi")
+    
+    # Yangi ma'lumotlarni yozamiz
+    student.name = student_data.name
+    student.phone = student_data.phone
+    student.fee = student_data.fee
+    db.commit()
+    return {"message": "O'quvchi ma'lumotlari yangilandi! ✏️"}
+
+@app.put("/pay-student/{student_id}")
+def pay_student(student_id: int, db: Session = Depends(get_db)):
+    student = db.query(models.Student).filter(models.Student.id == student_id).first()
+    if not student:
+        raise HTTPException(status_code=404, detail="O'quvchi topilmadi")
+    
+    # Holatni o'zgartiramiz: Agar to'lagan bo'lsa -> qarzga o'tadi, qarz bo'lsa -> to'lagan bo'ladi
+    student.isPaid = not student.isPaid
+    db.commit()
+    return {"message": "To'lov holati o'zgardi! 💸"}
